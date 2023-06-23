@@ -16,7 +16,7 @@ RUN apt-get update \
     && rm -rf /tmp/* /var/tmp/* \
     && mkdir -p /home/paper-summarizer
 
-WORKDIR /home/paper-summarizer
+WORKDIR /app
 
 RUN pip install --no-cache-dir opencv-python-headless \
     arxiv \
@@ -29,7 +29,8 @@ RUN pip install --no-cache-dir opencv-python-headless \
     openai \
     python-dotenv \
     transformers \
-    nltk
+    nltk \
+    onnxruntime
 
 RUN pip install --no-cache-dir slack_bolt \
     && rm -r /root/.cache/pip
@@ -39,7 +40,6 @@ COPY . ./
 ENV PYTHON_ENV build
 RUN python3 -u app.py
 
-COPY . ./
 # production stage
 FROM python:3.7-slim
 # Allow statements and log messages to immediately appear in the logs
@@ -47,8 +47,10 @@ ENV PYTHONUNBUFFERED True
 
 COPY --from=builder /root/.cache /root/.cache
 COPY --from=builder /root/.paddleocr /root/.paddleocr
+COPY --from=builder /root/nltk_data/corpora/words /root/nltk_data/corpora/words
 RUN ln -s /root/.cache /home/.cache \
-    && ln -s /root/.paddleocr /home/.paddleocr
+    && ln -s /root/.paddleocr /home/.paddleocr \
+    && ln -s /root/nltk_data /home//nltk_data
 
 COPY --from=builder /usr/local/lib/python3.7/dist-packages /usr/local/lib/python3.7/site-packages
 COPY --from=builder /usr/lib/x86_64-linux-gnu /usr/lib/x86_64-linux-gnu
@@ -67,4 +69,4 @@ COPY . ./
 
 ENV PORT 8080
 
-CMD exec gunicorn --bind :$PORT --workers 4 --worker-class uvicorn.workers.UvicornWorker --threads 2 --timeout 0 app:app
+CMD exec gunicorn --bind :$PORT --workers 8 --worker-class uvicorn.workers.UvicornWorker --threads 8 --timeout 0 app:app

@@ -44,11 +44,19 @@ class OCRModel:
         """
         self.max_length = max_length
         self.layout_model = PPStructure(table=False, ocr=False, lang="en")
-        self.ocr_model = PaddleOCR(ocr=True, lang="en", ocr_version="PP-OCRv3")
+        self.ocr_model = PaddleOCR(ocr=True,
+                                   lang="en",
+                                   ocr_version="PP-OCRv3",
+                                   use_onnx=True,
+                                   cls_model_dir="/app/models/cls.onnx",
+                                   rec_model_dir="/app/models/rec.onnx",
+                                   det_model_dir="/app/models/det.onnx",
+        )
         self.tokenizer = GPT2Tokenizer.from_pretrained("gpt2")
 
         # Download the set of English words
-        nltk.download("words")
+        if os.getenv("PYTHON_ENV") != "production":
+            nltk.download("words")
 
     def extract_text(self, pdf_file: Union[Path, bytes]) -> Union[str, None]:
         """

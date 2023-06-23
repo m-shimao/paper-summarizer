@@ -1,6 +1,7 @@
 *
 !app.py
 !src
+!models
 *.pyc
 *.pyo
 *.pyd

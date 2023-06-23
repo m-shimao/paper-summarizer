@@ -16,6 +16,12 @@ build:
 		-t  ${IMAGE_NAME} \
 		-f Dockerfile ${PROJECT_DIRECTORY}
 
+build_no_cache:
+	docker build \
+		--no-cache \
+		-t  ${IMAGE_NAME} \
+		-f Dockerfile ${PROJECT_DIRECTORY}
+
 push:
 	docker push ${IMAGE_NAME}
 
@@ -24,9 +30,9 @@ deploy:
 	gcloud run deploy ${GCP_IMAGE_NAME} \
 		--image=${IMAGE_NAME} \
 		--region=${GCP_REGION} \
-		--concurrency=4 \
-		--cpu=4 \
-		--memory=8Gi \
+		--concurrency=1 \
+		--cpu=8 \
+		--memory=6Gi \
 		--min-instances=0 \
 		--max-instances=1 \
 		--port=8080 \
@@ -43,16 +49,13 @@ test_run:
 		-p 8080:8080 \
 		--env-file ${PROJECT_DIRECTORY}/.env \
 		--env PYTHON_ENV=test \
-		-v ${PROJECT_DIRECTORY}/app.py:/app/app.py \
-		-v ${PROJECT_DIRECTORY}/src:/app/src \
-		${IMAGE_NAME} \
-		gunicorn \
-		 	--bind :8080 \
-			--workers 1 \
-			--worker-class uvicorn.workers.UvicornWorker \
-			--threads 2 \
-			--timeout 0 \
-			app:app
+		-v ${PROJECT_DIRECTORY}/app.py:/home/app.py \
+		-v ${PROJECT_DIRECTORY}/src:/home/src \
+		-v ${PROJECT_DIRECTORY}/models:/app/models \
+		-v ./cache/.cache:/root/.cache \
+		-v ./cache/.paddleocr:/root/.paddleocr \
+		paper-summarizer:0.1.0 \
+		/bin/bash -c "cd /home/${NAME} && uvicorn app:app --reload --port=8080 --host='0.0.0.0'"
 
 run:
 	docker run --rm -it \
